@@ -20,6 +20,7 @@ import tarfile
 import logging.handlers
 
 user_path = os.path.expanduser("~")
+print(user_path)
 if platform.system() == "Windows":
     system_path = "C:\\Program Files"
     system_path_x86 = "C:\\Program Files (x86)"
@@ -125,37 +126,40 @@ def is_tarfile(file_path: str) -> bool:
     return tarfile.is_tarfile(file_path)
 
 
-def download_and_verify_package(package: Package, logger: logging.Logger) -> str:
-    logger.info(f"Downloading package '{package.name}'")
+def download_and_verify_package(package: Package, logger: logging.Logger):
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        with urllib.request.urlopen(package.location) as response:
-            shutil.copyfileobj(response, temp_file)
-
-        temp_file.flush()
-        temp_file.close()
+        urllib.request.urlretrieve(package.location, temp_file.name)
 
         if package.checksum:
-            logger.info("Verifying package checksum")
+            # Verify checksum
+            hasher = hashlib.sha256()
             with open(temp_file.name, "rb") as f:
-                checksum = hashlib.sha256(f.read()).hexdigest()
-            if checksum != package.checksum:
-                os.remove(temp_file.name)
-                raise ValueError("Checksum mismatch for the downloaded package")
+                while chunk := f.read(8192):
+                    hasher.update(chunk)
 
-        file_ext = os.path.splitext(temp_file.name)[1]
-        if file_ext in [".zip", ".tar.gz"]:
-            extracted_dir = tempfile.mkdtemp(prefix="pkg_manager_")
-            if file_ext == ".zip":
-                with zipfile.ZipFile(temp_file.name, "r") as zip_ref:
-                    zip_ref.extractall(extracted_dir)
-            elif file_ext == ".tar.gz":
-                with tarfile.open(temp_file.name, "r:gz") as tar_ref:
-                    tar_ref.extractall(extracted_dir)
+            calculated_checksum = hasher.hexdigest()
+            if calculated_checksum != package.checksum:
+                raise ValueError(f"Checksum mismatch: {calculated_checksum} != {package.checksum}")
 
-            os.remove(temp_file.name)
+        extracted_dir = None
+        if zipfile.is_zipfile(temp_file.name):
+            # Extract zip
+            with zipfile.ZipFile(temp_file.name, 'r') as zip_ref:
+                extracted_dir = tempfile.mkdtemp()
+                zip_ref.extractall(extracted_dir)
+        elif tarfile.is_tarfile(temp_file.name):
+            # Extract tar.gz
+            with tarfile.open(temp_file.name, 'r:gz') as tar_ref:
+                extracted_dir = tempfile.mkdtemp()
+                tar_ref.extractall(extracted_dir)
+
+        temp_file.close()
+        os.remove(temp_file.name)
+
+        if extracted_dir:
             return extracted_dir
-
-    return temp_file.name
+        else:
+            return temp_file.name
 
 def run_script(script: str, logger: logging.Logger, **format_args):
     is_windows = platform.system() == "Windows"
@@ -196,6 +200,7 @@ def vendor_install(package: Package, logger: logging.Logger):
         logger.info("Running pre-install script")
         run_script(package.pre_install.format(**format_args), logger, **format_args)
     if package.install:
+        print(package_file)
         logger.info("Running install script")
         run_script(package.install.format(**format_args), logger, **format_args)
     if package.post_install:

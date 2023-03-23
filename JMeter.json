@@ -8,9 +8,9 @@
   "install_dependencies": [],
   "uninstall_dependencies": [],
   "pre_install": null,
-  "install": "Copy-Item -Path \"{package_file}\" -Destination \"{user_path}\" -Recurse -ErrorAction SilentlyContinue",
+  "install": "Copy-Item -Path \"{package_file}\\apache-jmeter-5.5\" -Destination \"{user_path}\\Apache JMeter\" -Recurse -ErrorAction SilentlyContinue",
   "post_install": null,
   "pre_uninstall": null,
-  "uninstall": "Start-Process -FilePath \"$env:ProgramFiles\\Mozilla Firefox\\uninstall\\helper.exe\" -ArgumentList \"/S\" -Wait -NoNewWindow",
+  "uninstall": null,
   "post_uninstall": null
 }
