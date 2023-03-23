@@ -1,0 +1,16 @@
+{
+  "name": "firefox",
+  "version": "98.0",
+  "strategy": "vendor_install",
+  "location": "https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=en-US",
+  "checksum": null,
+  "installer_type": "exe",
+  "install_dependencies": [],
+  "uninstall_dependencies": [],
+  "pre_install": null,
+  "install": "Start-Process -FilePath \"{package_file}\" -ArgumentList \"/S\" -Wait -NoNewWindow",
+  "post_install": null,
+  "pre_uninstall": null,
+  "uninstall": "Start-Process -FilePath \"$env:ProgramFiles\\Mozilla Firefox\\uninstall\\helper.exe\" -ArgumentList \"/S\" -Wait -NoNewWindow",
+  "post_uninstall": null
+}
