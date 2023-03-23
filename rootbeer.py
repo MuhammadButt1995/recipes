@@ -83,7 +83,6 @@ def fetch_and_parse_recipe(package_name: str) -> Package:
     repo_name = "recipes"
     branch = "master"  # or the branch you want to use
     file_path = f"{package_name}.json"
-    print(file_path)
 
     url = f"https://raw.githubusercontent.com/{repo_owner}/{repo_name}/{branch}/{file_path}"
     response = requests.get(url)
@@ -126,40 +125,48 @@ def is_tarfile(file_path: str) -> bool:
     return tarfile.is_tarfile(file_path)
 
 
-def download_and_verify_package(package: Package, logger: logging.Logger):
+def download_and_verify_package(package, logger):
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        urllib.request.urlretrieve(package.location, temp_file.name)
+        # Download the package
+        logger.info(f"Downloading package '{package.name}'")
+        response = requests.get(package.location, stream=True)
+        response.raise_for_status()
 
-        if package.checksum:
-            # Verify checksum
-            hasher = hashlib.sha256()
-            with open(temp_file.name, "rb") as f:
-                while chunk := f.read(8192):
-                    hasher.update(chunk)
+        # Save the package to a temporary file
+        for chunk in response.iter_content(chunk_size=8192):
+            temp_file.write(chunk)
 
-            calculated_checksum = hasher.hexdigest()
-            if calculated_checksum != package.checksum:
-                raise ValueError(f"Checksum mismatch: {calculated_checksum} != {package.checksum}")
-
-        extracted_dir = None
-        if zipfile.is_zipfile(temp_file.name):
-            # Extract zip
-            with zipfile.ZipFile(temp_file.name, 'r') as zip_ref:
-                extracted_dir = tempfile.mkdtemp()
-                zip_ref.extractall(extracted_dir)
-        elif tarfile.is_tarfile(temp_file.name):
-            # Extract tar.gz
-            with tarfile.open(temp_file.name, 'r:gz') as tar_ref:
-                extracted_dir = tempfile.mkdtemp()
-                tar_ref.extractall(extracted_dir)
-
+        # Close the temporary file
         temp_file.close()
-        os.remove(temp_file.name)
+
+        # Verify the checksum if provided
+        if package.checksum:
+            logger.info(f"Verifying checksum for package '{package.name}'")
+            with open(temp_file.name, 'rb') as file:
+                file_hash = hashlib.sha256(file.read()).hexdigest()
+
+            if file_hash != package.checksum.lower():
+                os.remove(temp_file.name)
+                raise ValueError(f"Checksum mismatch for package '{package.name}'")
+
+        # Extract the package if it's a zip or tar.gz file
+        extracted_dir = None
+        if temp_file.name.endswith('.zip'):
+            extracted_dir = os.path.splitext(temp_file.name)[0]
+            with zipfile.ZipFile(temp_file.name, 'r') as zip_ref:
+                zip_ref.extractall(extracted_dir)
+            os.remove(temp_file.name)
+        elif temp_file.name.endswith('.tar.gz'):
+            extracted_dir = os.path.splitext(os.path.splitext(temp_file.name)[0])[0]
+            with tarfile.open(temp_file.name, 'r:gz') as tar_ref:
+                tar_ref.extractall(extracted_dir)
+            os.remove(temp_file.name)
 
         if extracted_dir:
             return extracted_dir
         else:
             return temp_file.name
+
 
 def run_script(script: str, logger: logging.Logger, **format_args):
     is_windows = platform.system() == "Windows"
@@ -200,7 +207,6 @@ def vendor_install(package: Package, logger: logging.Logger):
         logger.info("Running pre-install script")
         run_script(package.pre_install.format(**format_args), logger, **format_args)
     if package.install:
-        print(package_file)
         logger.info("Running install script")
         run_script(package.install.format(**format_args), logger, **format_args)
     if package.post_install:
