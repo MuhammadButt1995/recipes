@@ -2,7 +2,7 @@
   "name": "Apache JMeter",
   "version": "5.5",
   "strategy": "vendor_install",
-  "location": "https://dlcdn.apache.org//jmeter/binaries/apache-jmeter-5.5.zip",
+  "location": "https://github.com/apache/jmeter/archive/refs/tags/rel/v5.5.zip",
   "checksum": null,
   "installer_type": "cp",
   "install_dependencies": [],
