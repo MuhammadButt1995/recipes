@@ -1,4 +1,0 @@
-INFO     Installing package 'firefox'
-INFO     Downloading package 'firefox'
-INFO     Running install script
-ERROR    Installation of 'firefox' failed: [WinError 267] The directory name is invalid: 'C:\\Users\\Sunny\\AppData\\Local\\Temp\\tmpra_hqmmz'
