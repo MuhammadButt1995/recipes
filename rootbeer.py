@@ -82,6 +82,7 @@ def fetch_and_parse_recipe(package_name: str) -> Package:
     repo_name = "recipes"
     branch = "master"  # or the branch you want to use
     file_path = f"{package_name}.json"
+    print(file_path)
 
     url = f"https://raw.githubusercontent.com/{repo_owner}/{repo_name}/{branch}/{file_path}"
     response = requests.get(url)
